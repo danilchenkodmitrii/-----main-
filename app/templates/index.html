@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Совещайка - Система бронирования переговорных</title>
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-container">
+        <div class="logo">
+          <img src="/icons/Logo.png" alt="Совещайка" class="logo-image">
+          <h1>Совещайка</h1>
+        </div>
+        <nav class="nav-menu">
+          <button class="nav-btn active" data-view="home">Главная</button>
+          <button class="nav-btn" data-view="dashboard">Расписание</button>
+          <button class="nav-btn" data-view="admin" style="display: none;">Администратор</button>
+        </nav>
+        <div class="user-section">
+          <span class="user-name" style="cursor: pointer;">Пользователь</span>
+          <button class="logout-btn">Выход</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Notifications -->
+    <div id="notifications" class="notifications-container"></div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Auth View -->
+      <section id="auth" class="view active">
+        <div class="auth-container">
+          <div class="auth-card">
+            <div class="auth-logo">
+              <img src="/icons/Logo.png" alt="Совещайка" class="auth-logo-image">
+              <h1>Совещайка</h1>
+            </div>
+
+            <div id="loginForm" class="auth-form active">
+              <div class="auth-tabs-inner">
+                <button class="auth-tab-btn active" onclick="app.switchLoginMode('list')">Выбрать пользователя</button>
+                <button class="auth-tab-btn" onclick="window.app.switchLoginMode('password')">Вход по email</button>
+              </div>
+
+              <div id="loginList" class="auth-login-mode active">
+                <p class="auth-subtitle">Выберите пользователя для входа</p>
+                <div id="authUsersList" class="auth-users-list"></div>
+              </div>
+
+              <div id="loginPasswordForm" class="auth-login-mode">
+                <p class="auth-subtitle">Введите ваши учетные данные</p>
+                <div class="form-group">
+                  <label>Email</label>
+                  <input type="email" id="loginEmail" class="form-control" placeholder="your@email.com">
+                </div>
+                <div class="form-group">
+                  <label>Пароль</label>
+                  <input type="password" id="loginPassword" class="form-control" placeholder="Введите пароль">
+                </div>
+                <button class="btn btn-primary" onclick="window.app.passwordLogin()">Войти</button>
+              </div>
+
+              <div class="auth-divider">или</div>
+              <button class="btn btn-secondary" onclick="app.switchAuthMode('register')">Создать новый аккаунт</button>
+            </div>
+
+            <div id="registerForm" class="auth-form">
+              <h2>Регистрация</h2>
+              <p class="auth-subtitle">Создайте новый аккаунт</p>
+              <div class="form-group">
+                <label>Имя</label>
+                <input type="text" id="registerFirstName" class="form-control" placeholder="Введите ваше имя">
+              </div>
+              <div class="form-group">
+                <label>Фамилия</label>
+                <input type="text" id="registerLastName" class="form-control" placeholder="Введите вашу фамилию">
+              </div>
+              <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="registerEmail" class="form-control" placeholder="example@company.com">
+              </div>
+              <div class="form-group">
+                <label>Пароль</label>
+                <input type="password" id="registerPassword" class="form-control" placeholder="Введите пароль">
+              </div>
+              <button class="btn btn-primary" onclick="window.app.registerUser()">Зарегистрироваться</button>
+              <button class="btn btn-secondary" onclick="window.app.switchAuthMode('login')">Вернуться к входу</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Home View -->
+      <section id="home" class="view">
+        <div class="home-container">
+          <div class="home-content">
+            <h2 class="home-title">
+              <span class="home-title-primary">Упростите процесс бронирования</span>
+              <span class="home-title-secondary">переговорных комнат</span>
+            </h2>
+            <p class="home-description">
+              Забудьте о трудностях с поиском свободного места для переговоров в вашем офисе. Назначайте встречи всего в два клика, выбирая то помещение, которое идеально подойдет для решения ваших задач.
+            </p>
+            <button class="btn btn-primary btn-large" onclick="app.switchView('booking')">Забронировать сейчас</button>
+          </div>
+          <div class="home-logo">
+            <img src="/icons/Logo.png" alt="Совещайка" class="home-logo-image">
+          </div>
+        </div>
+      </section>
+
+      <!-- Dashboard View -->
+      <section id="dashboard" class="view">
+        <div class="container">
+          <div class="dashboard-header">
+            <h2>Расписание переговорных комнат</h2>
+            <button class="btn btn-secondary" id="filterToggle"><img src="/icons/settings.png" alt="Фильтры" class="filter-icon"> Фильтры</button>
+          </div>
+
+          <div class="filter-panel" id="filterPanel">
+            <!-- 1. Статус комнаты -->
+            <div class="filter-section">
+              <label class="filter-label">Статус комнаты</label>
+              <div class="filter-options">
+                <label class="checkbox-label"><input type="checkbox" name="status" value="free" checked> Свободна</label>
+                <label class="checkbox-label"><input type="checkbox" name="status" value="busy" checked> Занята</label>
+              </div>
+            </div>
+            
+            <!-- 2. Дата (ДОБАВЬТЕ ЭТОТ БЛОК) -->
+            <div class="filter-section">
+              <label class="filter-label">Дата</label>
+              <input type="date" id="filterDate" class="form-control filter-date">
+            </div>
+            
+            <!-- 3. Вместимость -->
+            <div class="filter-section">
+              <label class="filter-label">Вместимость</label>
+              <div class="filter-options">
+                <label class="checkbox-label"><input type="checkbox" name="capacity" value="1-2" checked> 1-2 человека</label>
+                <label class="checkbox-label"><input type="checkbox" name="capacity" value="3-5" checked> 3-5 человек</label>
+                <label class="checkbox-label"><input type="checkbox" name="capacity" value="6-10" checked> 6-10 человек</label>
+                <label class="checkbox-label"><input type="checkbox" name="capacity" value="10+" checked> 10+ человек</label>
+              </div>
+            </div>
+            
+            <!-- 4. Оборудование (ДОБАВЬТЕ ЭТОТ БЛОК) -->
+            <div class="filter-section">
+              <label class="filter-label">Оборудование</label>
+              <input type="text" id="filterAmenities" class="form-control" placeholder="Поиск по оборудованию">
+            </div>
+            
+            <!-- 5. Кнопки -->
+            <div class="filter-actions">
+              <button class="btn btn-primary" id="applyFilters">Применить</button>
+              <button class="btn btn-secondary" id="resetFilters">Сбросить</button>
+            </div> 
+          </div>
+
+          <div class="dashboard-grid" id="roomsGrid"></div>
+        </div>
+      </section>
+
+      <!-- Booking View -->
+      <section id="booking" class="view">
+        <div class="container">
+          <h2>Бронирование переговорной</h2>
+          <div class="booking-form">
+            <div class="form-group">
+              <label>Выберите комнату</label>
+              <select id="roomSelect" class="form-control">
+                <option value="">-- Выберите комнату --</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Дата</label>
+              <input type="date" id="bookingDate" class="form-control">
+            </div>
+            <div class="form-group">
+              <label>Время начала</label>
+              <select id="startTime" class="form-control">
+                <option value="">-- Выберите время --</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Время окончания</label>
+              <select id="endTime" class="form-control">
+                <option value="">-- Выберите время --</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Тема встречи</label>
+              <input type="text" id="meetingTitle" class="form-control" placeholder="Введите тему встречи">
+            </div>
+            <div class="form-group">
+              <label>Участники (через запятую)</label>
+              <input type="text" id="participants" class="form-control" placeholder="name1@company.com, name2@company.com">
+            </div>
+            <button class="btn btn-primary" id="confirmBookingBtn">Забронировать</button>
+          </div>
+          <div class="availability-grid" id="availabilityGrid"></div>
+        </div>
+      </section>
+
+      <!-- Profile View -->
+      <section id="profile" class="view">
+        <div class="container">
+          <h2>Профиль</h2>
+          <div class="profile-card">
+            <div class="current-user-info">
+              <h3>Текущий пользователь</h3>
+              <div class="user-info-display">
+                <div class="info-item">
+                  <span class="label">Имя:</span>
+                  <span class="value" id="displayName"></span>
+                </div>
+                <div class="info-item">
+                  <span class="label">Email:</span>
+                  <span class="value" id="displayEmail"></span>
+                </div>
+                <div class="info-item">
+                  <span class="label">Роль:</span>
+                  <span class="value" id="displayRole"></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="auth-section">
+              <h3>Выбрать пользователя</h3>
+              <div id="usersList" class="users-list"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Админ View -->
+<section id="admin" class="view">
+  <div class="container">
+    <h2>Администратор</h2>
+    <div class="admin-tabs">
+      <button class="tab-btn active" data-tab="rooms">Комнаты</button>
+      <button class="tab-btn" data-tab="access">Права доступа</button>
+      <button class="tab-btn" data-tab="bookings">Все бронирования</button>
+    </div>
+
+     <!-- Rooms Management -->
+     <div id="rooms-tab" class="tab-content active">
+      <div class="admin-card">
+        <h3>Добавить новую комнату</h3>
+        <div class="form-group">
+          <input type="text" id="roomName" class="form-control" placeholder="Название комнаты">
+        </div>
+        <div class="form-group">
+          <input type="number" id="roomCapacity" class="form-control" placeholder="Вместимость" min="1">
+        </div>
+        <div class="form-group">
+          <textarea id="roomAmenities" class="form-control" placeholder="Оборудование (через запятую)"></textarea>
+        </div>
+        <button class="btn btn-primary" id="addRoomBtn">Добавить комнату</button>
+      </div>
+      <div id="roomsList" class="rooms-list"></div>
+    </div>
+
+          <!-- Access Control -->
+          <div id="access-tab" class="tab-content">
+            <div class="admin-card">
+              <h3>Управление правами доступа</h3>
+              <div class="form-group">
+                <input type="text" id="userEmail" class="form-control" placeholder="Email пользователя">
+              </div>
+              <div class="form-group">
+                <label>Роль</label>
+                <select id="userRole" class="form-control">
+                  <option value="user">Пользователь</option>
+                  <option value="manager">Менеджер</option>
+                  <option value="admin">Администратор</option>
+                </select>
+              </div>
+              <button class="btn btn-primary" id="updateAccessBtn">Установить права</button>
+            </div>
+            <div id="accessList" class="access-list"></div>
+          </div>
+
+          <!-- Bookings List -->
+          <div id="bookings-tab" class="tab-content">
+            <div id="bookingsList" class="bookings-list"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>&copy; 2025 Совещайка. Система управления переговорными комнатами.</p>
+    </footer>
+  </div>
+
+  <script type="module" src="/static/js/app.js"></script>
+</body>
+</html>
