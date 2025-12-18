@@ -18,8 +18,9 @@
         <nav class="nav-menu">
           <button class="nav-btn active" data-view="home">Главная</button>
           <button class="nav-btn" data-view="dashboard">Расписание</button>
-          <button class="nav-btn" data-view="admin" style="display: none;">Администратор</button>
-        </nav>
+          <button class="nav-btn" data-view="admin" style="display: none;" id="adminNavBtn">Администратор</button>
+          <button class="nav-btn" data-view="admin" style="display: none;" id="managerNavBtn">Менеджер</button>
+      </nav>
         <div class="user-section">
           <span class="user-name" style="cursor: pointer;">Пользователь</span>
           <button class="logout-btn">Выход</button>
@@ -33,67 +34,93 @@
     <!-- Main Content -->
     <main class="main-content">
       <!-- Auth View -->
-      <section id="auth" class="view active">
-        <div class="auth-container">
-          <div class="auth-card">
-            <div class="auth-logo">
-              <img src="/icons/Logo.png" alt="Совещайка" class="auth-logo-image">
-              <h1>Совещайка</h1>
-            </div>
+<section id="auth" class="view active">
+  <div class="auth-container">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <img src="/icons/Logo.png" alt="Совещайка" class="auth-logo-image">
+        <h1>Совещайка</h1>
+      </div>
 
-            <div id="loginForm" class="auth-form active">
-              <div class="auth-tabs-inner">
-                <button class="auth-tab-btn active" onclick="app.switchLoginMode('list')">Выбрать пользователя</button>
-                <button class="auth-tab-btn" onclick="window.app.switchLoginMode('password')">Вход по email</button>
-              </div>
-
-              <div id="loginList" class="auth-login-mode active">
-                <p class="auth-subtitle">Выберите пользователя для входа</p>
-                <div id="authUsersList" class="auth-users-list"></div>
-              </div>
-
-              <div id="loginPasswordForm" class="auth-login-mode">
-                <p class="auth-subtitle">Введите ваши учетные данные</p>
-                <div class="form-group">
-                  <label>Email</label>
-                  <input type="email" id="loginEmail" class="form-control" placeholder="your@email.com">
-                </div>
-                <div class="form-group">
-                  <label>Пароль</label>
-                  <input type="password" id="loginPassword" class="form-control" placeholder="Введите пароль">
-                </div>
-                <button class="btn btn-primary" onclick="window.app.passwordLogin()">Войти</button>
-              </div>
-
-              <div class="auth-divider">или</div>
-              <button class="btn btn-secondary" onclick="app.switchAuthMode('register')">Создать новый аккаунт</button>
-            </div>
-
-            <div id="registerForm" class="auth-form">
-              <h2>Регистрация</h2>
-              <p class="auth-subtitle">Создайте новый аккаунт</p>
-              <div class="form-group">
-                <label>Имя</label>
-                <input type="text" id="registerFirstName" class="form-control" placeholder="Введите ваше имя">
-              </div>
-              <div class="form-group">
-                <label>Фамилия</label>
-                <input type="text" id="registerLastName" class="form-control" placeholder="Введите вашу фамилию">
-              </div>
-              <div class="form-group">
-                <label>Email</label>
-                <input type="email" id="registerEmail" class="form-control" placeholder="example@company.com">
-              </div>
-              <div class="form-group">
-                <label>Пароль</label>
-                <input type="password" id="registerPassword" class="form-control" placeholder="Введите пароль">
-              </div>
-              <button class="btn btn-primary" onclick="window.app.registerUser()">Зарегистрироваться</button>
-              <button class="btn btn-secondary" onclick="window.app.switchAuthMode('login')">Вернуться к входу</button>
-            </div>
-          </div>
+      <div id="loginForm" class="auth-form active">
+        <h2>Вход в систему</h2>
+        <p class="auth-subtitle">Введите ваши учетные данные</p>
+        
+        <div class="form-group">
+            <label>Email *</label>
+            <input type="email" id="loginEmail" class="form-control" 
+                   placeholder="your@email.com"
+                   oninput="window.app.validateLoginEmail(this)">
+            <span class="form-hint">Введите корректный email адрес</span>
         </div>
-      </section>
+        
+        <div class="form-group">
+            <label>Пароль *</label>
+            <input type="password" id="loginPassword" class="form-control" 
+                   placeholder="Введите пароль"
+                   oninput="window.app.validateLoginPassword(this)">
+            <span class="form-hint">Введите ваш пароль</span>
+        </div>
+        
+        <button class="btn btn-primary" onclick="window.app.passwordLogin()" id="loginButton">
+            <span id="loginButtonText">Войти</span>
+            <span id="loginLoading" style="display: none;">🔄</span>
+        </button>
+        
+        <div class="auth-divider">или</div>
+        
+        <button class="btn btn-secondary" onclick="app.switchAuthMode('register')">
+            Создать новый аккаунт
+        </button>
+    </div>
+
+      <div id="registerForm" class="auth-form">
+        <h2>Регистрация</h2>
+        <p class="auth-subtitle">Создайте новый аккаунт</p>
+        
+        <div class="form-group">
+          <label>Имя *</label>
+          <input type="text" id="registerFirstName" class="form-control" 
+                 placeholder="Введите ваше имя"
+                 oninput="window.app.validateName(this, 'Имя')">
+          <span class="form-hint">Минимум 2 символа, только буквы, пробелы и дефисы</span>
+      </div>
+        
+      <div class="form-group">
+        <label>Фамилия *</label>
+        <input type="text" id="registerLastName" class="form-control" 
+               placeholder="Введите вашу фамилию"
+               oninput="window.app.validateName(this, 'Фамилия')">
+        <span class="form-hint">Минимум 2 символа, только буквы, пробелы и дефисы</span>
+    </div>
+    
+    <div class="form-group">
+        <label>Email *</label>
+        <input type="email" id="registerEmail" class="form-control" 
+               placeholder="example@company.com"
+               oninput="window.app.validateEmail(this)">
+        <span class="form-hint">Введите корректный email адрес</span>
+    </div>
+    
+    <div class="form-group">
+        <label>Пароль *</label>
+        <input type="password" id="registerPassword" class="form-control" 
+               placeholder="Введите пароль"
+               oninput="window.app.validatePassword(this)">
+        <span class="form-hint">Минимум 4 символа</span>
+    </div>
+    
+    <button class="btn btn-primary" onclick="window.app.registerUser()">
+        Зарегистрироваться
+    </button>
+    
+    <button class="btn btn-secondary" onclick="window.app.switchAuthMode('login')">
+        Вернуться к входу
+    </button>
+</div>
+    </div>
+  </div>
+</section>
 
       <!-- Home View -->
       <section id="home" class="view">
@@ -194,11 +221,11 @@
               </select>
             </div>
             <div class="form-group">
-              <label>Тема встречи</label>
+              <label>Тема встречи*</label>
               <input type="text" id="meetingTitle" class="form-control" placeholder="Введите тему встречи">
             </div>
             <div class="form-group">
-              <label>Участники (через запятую)</label>
+              <label>Участники (через запятую)*</label>
               <input type="text" id="participants" class="form-control" placeholder="name1@company.com, name2@company.com">
             </div>
             <button class="btn btn-primary" id="confirmBookingBtn">Забронировать</button>
@@ -210,10 +237,11 @@
       <!-- Profile View -->
       <section id="profile" class="view">
         <div class="container">
-          <h2>Профиль</h2>
+          <h2>Мой профиль</h2>
           <div class="profile-card">
+            <!-- Информация о пользователе -->
             <div class="current-user-info">
-              <h3>Текущий пользователь</h3>
+              <h3>Личная информация</h3>
               <div class="user-info-display">
                 <div class="info-item">
                   <span class="label">Имя:</span>
@@ -227,73 +255,132 @@
                   <span class="label">Роль:</span>
                   <span class="value" id="displayRole"></span>
                 </div>
+                <div class="info-item">
+                  <span class="label">Зарегистрирован:</span>
+                  <span class="value" id="displayCreatedAt"></span>
+                </div>
               </div>
             </div>
-
+      
             <div class="divider"></div>
-
-            <div class="auth-section">
-              <h3>Выбрать пользователя</h3>
-              <div id="usersList" class="users-list"></div>
+      
+            <!-- Мои бронирования -->
+            <div class="my-bookings-section">
+              <h3>Мои бронирования</h3>
+              <div class="bookings-filter">
+                <button class="btn btn-secondary btn-small active" onclick="window.app.filterMyBookings('all')">Все</button>
+                <button class="btn btn-secondary btn-small" onclick="window.app.filterMyBookings('today')">Сегодня</button>
+                <button class="btn btn-secondary btn-small" onclick="window.app.filterMyBookings('upcoming')">Предстоящие</button>
+                <button class="btn btn-secondary btn-small" onclick="window.app.filterMyBookings('past')">Прошедшие</button>
+              </div>
+              <div id="myBookingsList" class="my-bookings-list">
+                <p class="text-muted">Загрузка ваших бронирований...</p>
+              </div>
+            </div>
+      
+            <!-- Только для админа/менеджера - быстрый переключатель пользователей -->
+            <div id="adminUserSwitch" style="display: none;">
+              <div class="divider"></div>
+              <div class="auth-section">
+                <h3>Быстрый переключение пользователя (админ)</h3>
+                <div id="usersList" class="users-list"></div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       <!-- Админ View -->
-<section id="admin" class="view">
-  <div class="container">
-    <h2>Администратор</h2>
-    <div class="admin-tabs">
-      <button class="tab-btn active" data-tab="rooms">Комнаты</button>
-      <button class="tab-btn" data-tab="access">Права доступа</button>
-      <button class="tab-btn" data-tab="bookings">Все бронирования</button>
-    </div>
-
-     <!-- Rooms Management -->
-     <div id="rooms-tab" class="tab-content active">
-      <div class="admin-card">
-        <h3>Добавить новую комнату</h3>
-        <div class="form-group">
-          <input type="text" id="roomName" class="form-control" placeholder="Название комнаты">
-        </div>
-        <div class="form-group">
-          <input type="number" id="roomCapacity" class="form-control" placeholder="Вместимость" min="1">
-        </div>
-        <div class="form-group">
-          <textarea id="roomAmenities" class="form-control" placeholder="Оборудование (через запятую)"></textarea>
-        </div>
-        <button class="btn btn-primary" id="addRoomBtn">Добавить комнату</button>
-      </div>
-      <div id="roomsList" class="rooms-list"></div>
-    </div>
-
-          <!-- Access Control -->
-          <div id="access-tab" class="tab-content">
-            <div class="admin-card">
-              <h3>Управление правами доступа</h3>
-              <div class="form-group">
-                <input type="text" id="userEmail" class="form-control" placeholder="Email пользователя">
-              </div>
-              <div class="form-group">
-                <label>Роль</label>
-                <select id="userRole" class="form-control">
-                  <option value="user">Пользователь</option>
-                  <option value="manager">Менеджер</option>
-                  <option value="admin">Администратор</option>
-                </select>
-              </div>
-              <button class="btn btn-primary" id="updateAccessBtn">Установить права</button>
+      <section id="admin" class="view">
+        <div class="container">
+            <h2>
+                <span id="adminPanelTitle">Администратор</span>
+                <span id="managerPanelTitle" style="display: none;">Менеджер</span>
+            </h2>
+            
+            <div class="admin-tabs">
+                <button class="tab-btn active" data-tab="rooms">Комнаты</button>
+                <button class="tab-btn" data-tab="access">Права доступа</button>
+                <button class="tab-btn" data-tab="bookings">Все бронирования</button>
+                <button class="tab-btn" data-tab="stats" style="display: none;">Статистика</button>
             </div>
-            <div id="accessList" class="access-list"></div>
+            
+            <!-- Rooms Management (только для админа) -->
+            <div id="rooms-tab" class="tab-content active">
+              <div class="admin-card">
+                  <h3>Добавить новую комнату</h3>
+                  
+                  <div class="form-group">
+                      <label>Название комнаты *</label>
+                      <input type="text" id="roomName" class="form-control" placeholder="Например: Конференц-зал 'Альфа'">
+                  </div>
+                  
+                  <div class="form-group">
+                      <label>Вместимость (человек) *</label>
+                      <input type="number" id="roomCapacity" class="form-control" placeholder="Например: 6" min="1" max="50">
+                  </div>
+                  
+                  <div class="form-group">
+                      <label>Цена за час (руб.) *</label>
+                      <div class="input-with-icon">
+                          <input type="number" id="roomPrice" class="form-control" placeholder="Например: 500" min="0" step="50" value="0">
+                          <span class="input-icon">₽</span>
+                      </div>
+                      <small class="text-muted">Укажите 0 для бесплатной комнаты</small>
+                  </div>
+                  
+                  <div class="form-group">
+                      <label>Оборудование</label>
+                      <textarea id="roomAmenities" class="form-control" placeholder="Проектор, Wi-Fi, кондиционер, доска..."></textarea>
+                      <small class="text-muted">Перечислите через запятую</small>
+                  </div>
+                  
+                  <button class="btn btn-primary" id="addRoomBtn">
+                      Добавить комнату
+                  </button>
+              </div>
+              
+              <div id="roomsList" class="rooms-list"></div>
           </div>
-
-          <!-- Bookings List -->
-          <div id="bookings-tab" class="tab-content">
-            <div id="bookingsList" class="bookings-list"></div>
+            
+            <!-- Access Control (только для админа) -->
+            <div id="access-tab" class="tab-content">
+              <div class="admin-card">
+                  <h3>Управление правами доступа</h3>
+                  <p>Список всех пользователей системы</p>
+              </div>
+              
+              <!-- Список пользователей для управления правами -->
+              <div id="accessList" class="access-list"></div>
           </div>
+            
+            <!-- Bookings List (для админа и менеджера) -->
+            <div id="bookings-tab" class="tab-content">
+                <div id="bookingsList" class="bookings-list"></div>
+            </div>
+            
+            <!-- Stats (для менеджера) -->
+            <div id="stats-tab" class="tab-content">
+                <div class="admin-card">
+                    <h3>Статистика бронирований</h3>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-number" id="totalBookings">0</div>
+                            <div class="stat-label">Всего бронирований</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="todayBookings">0</div>
+                            <div class="stat-label">На сегодня</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="upcomingBookings">0</div>
+                            <div class="stat-label">Предстоящие</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-      </section>
+    </section>
     </main>
 
     <!-- Footer -->

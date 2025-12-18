@@ -5,7 +5,7 @@ from datetime import date, datetime
 import traceback
 import uuid
 
-from app.models import get_db, Booking, User, Room  # ← Добавьте User и Room!
+from app.models import get_db, Booking, User, Room
 from app.services.booking_service import BookingService
 from app.schemes.booking_schema import BookingCreateSchema
 from app.exceptions.booking_exceptions import BookingNotFound, TimeSlotNotAvailable, InvalidBookingData
@@ -140,23 +140,47 @@ async def create_booking(booking_data: BookingCreateSchema, db: AsyncSession = D
 @bookings_router.get("/{booking_id}")
 async def get_booking(booking_id: str, db: AsyncSession = Depends(get_db)):
     try:
-        booking = await BookingService.get_booking_by_id(db, booking_id)
+        print(f"🔍 Получение бронирования: {booking_id}")
+        
+        # Используем SQLAlchemy для получения бронирования
+        result = await db.execute(
+            select(Booking).where(Booking.id == booking_id)
+        )
+        booking = result.scalar()
+        
+        if not booking:
+            raise HTTPException(status_code=404, detail="Бронирование не найдено")
+        
+        # Загружаем связанные данные
+        await db.refresh(booking, ['user', 'room'])
+        
+        print(f"✅ Бронирование найдено: {booking.title}")
         return booking.to_dict()
-    except BookingNotFound as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"❌ Ошибка при получении бронирования {booking_id}: {str(e)}")
+        print(f"❌ Ошибка при получении бронирования: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
 
 @bookings_router.delete("/{booking_id}")
-async def delete_booking(booking_id: str, db: AsyncSession = Depends(get_db)):
+async def delete_booking(booking_id: str, db: AsyncSession = Depends(get_db), current_user: dict = None):
+    """Удаление бронирования - доступно админу, менеджеру и владельцу бронирования"""
     try:
         print(f"🗑️ Удаление бронирования: {booking_id}")
-        await BookingService.delete_booking(db, booking_id)
+        
+        # Получаем бронирование
+        booking = await db.get(Booking, booking_id)
+        if not booking:
+            raise HTTPException(status_code=404, detail="Бронирование не найдено")
+        
+        await db.delete(booking)
+        await db.commit()
         print(f"✅ Бронирование удалено: {booking_id}")
         return {"message": f"Booking {booking_id} deleted successfully"}
-    except BookingNotFound as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"❌ Ошибка при удалении бронирования: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")

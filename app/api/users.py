@@ -2,9 +2,10 @@ from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 import traceback
 
+from app.models import User, Room, Booking, Role
 from app.models import get_db
 from app.services.user_service import UserService
-from app.schemes.user_schema import UserCreateSchema, UserRoleUpdateSchema
+from app.schemes.user_schema import UserLoginSchema, UserCreateSchema, UserRoleUpdateSchema
 from app.exceptions.user_exceptions import UserNotFound, UserAlreadyExists, InvalidUserData
 
 users_router = APIRouter()
@@ -22,26 +23,25 @@ async def get_all_users(db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
 
 @users_router.post("/login")
-async def login(data: dict, db: AsyncSession = Depends(get_db)):
+async def login(user_data: UserLoginSchema, db: AsyncSession = Depends(get_db)):  # ← Используем схему
     try:
         print("🔐 Запрос на вход в систему")
-        print(f"📧 Данные для входа: email={data.get('email')}")
+        print(f"📧 Данные для входа: email={user_data.email}")
         
-        email = data.get("email")
-        password = data.get("password")
-        
-        if not email or not password:
-            print("❌ Отсутствует email или пароль")
-            raise HTTPException(status_code=400, detail="Email and password required")
+        # Валидация через Pydantic уже произошла
+        email = user_data.email
+        password = user_data.password
         
         print(f"🔄 Аутентификация пользователя {email}...")
         
-        # Здесь должен вызываться статический метод
         user = await UserService.authenticate_user(db, email, password)
         
         if not user:
             print(f"❌ Неверные учетные данные для {email}")
-            raise HTTPException(status_code=401, detail="Invalid credentials")
+            raise HTTPException(
+                status_code=401, 
+                detail="Неверный email или пароль. Проверьте правильность введенных данных"
+            )
         
         print(f"✅ Успешный вход для {email}")
         user_dict = user.to_dict()
@@ -50,10 +50,16 @@ async def login(data: dict, db: AsyncSession = Depends(get_db)):
         
     except HTTPException:
         raise
+    except ValueError as e:
+        # Ошибки валидации Pydantic
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         print(f"❌ Неожиданная ошибка при входе: {str(e)}")
         print(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Внутренняя ошибка сервера. Попробуйте позже"
+        )
 
 @users_router.get("/{user_id}")
 async def get_user(user_id: str, db: AsyncSession = Depends(get_db)):
@@ -96,21 +102,44 @@ async def register(user_data: UserCreateSchema, db: AsyncSession = Depends(get_d
         raise HTTPException(status_code=500, detail=f"Registration error: {str(e)}")
 
 @users_router.post("/login")
-async def login(data: dict, db: AsyncSession = Depends(get_db)):
+async def login(user_data: UserLoginSchema, db: AsyncSession = Depends(get_db)):
     try:
-        email = data.get("email")
-        password = data.get("password")
+        print("🔐 Запрос на вход в систему")
+        print(f"📧 Данные для входа: email={user_data.email}")
         
-        if not email or not password:
-            raise HTTPException(status_code=400, detail="Email and password required")
+        # Валидация через Pydantic уже произошла, но проверим пользователя
+        email = user_data.email
+        password = user_data.password
         
+        print(f"🔄 Аутентификация пользователя {email}...")
+        
+        # Здесь должен вызываться статический метод
         user = await UserService.authenticate_user(db, email, password)
-        if not user:
-            raise HTTPException(status_code=401, detail="Invalid credentials")
         
-        return user.to_dict()
+        if not user:
+            print(f"❌ Неверные учетные данные для {email}")
+            raise HTTPException(
+                status_code=401, 
+                detail="Неверный email или пароль. Проверьте правильность введенных данных"
+            )
+        
+        print(f"✅ Успешный вход для {email}")
+        user_dict = user.to_dict()
+        print(f"📊 Данные пользователя: {user_dict}")
+        return user_dict
+        
+    except HTTPException:
+        raise
+    except ValueError as e:
+        # Ошибки валидации Pydantic
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
+        print(f"❌ Неожиданная ошибка при входе: {str(e)}")
+        print(traceback.format_exc())
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Внутренняя ошибка сервера. Попробуйте позже"
+        )
 
 @users_router.put("/{user_id}/role")
 async def update_user_role(user_id: str, role_data: UserRoleUpdateSchema, db: AsyncSession = Depends(get_db)):

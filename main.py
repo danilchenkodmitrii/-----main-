@@ -17,6 +17,7 @@ from app.exceptions.user_exceptions import UserNotFound, UserAlreadyExists, Inva
 from app.exceptions.room_exceptions import RoomNotFound, InvalidRoomData
 from app.exceptions.booking_exceptions import BookingNotFound, TimeSlotNotAvailable, InvalidBookingData
 from app.exceptions.role_exceptions import RoleNotFound, InvalidRoleData
+from app.api import debug_router
 
 # Импортируем роутеры из app
 from app.api import users_router, rooms_router, bookings_router, admin_router, roles_router
@@ -83,6 +84,7 @@ app.include_router(rooms_router, prefix="/api/rooms", tags=["Rooms"])
 app.include_router(bookings_router, prefix="/api/bookings", tags=["Bookings"])
 app.include_router(admin_router, prefix="/api/admin", tags=["Admin"])
 app.include_router(roles_router, prefix="/api/roles", tags=["Roles"])
+app.include_router(debug_router, prefix="/api/debug", tags=["Debug"])
 
 # Обработчики исключений
 @app.exception_handler(UserNotFound)
@@ -113,120 +115,6 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         status_code=422,
         content={"detail": exc.errors()},
     )
-
-@app.get("/debug/users")
-async def debug_users():
-    from app.models import async_session, User, Role
-    from sqlalchemy import select
-    
-    async with async_session() as session:
-        try:
-            # Проверяем таблицы
-            from sqlalchemy import text
-            result = await session.execute(text("SELECT name FROM sqlite_master WHERE type='table'"))
-            tables = result.fetchall()
-            
-            # Проверяем пользователей
-            users_result = await session.execute(select(User))
-            users = users_result.scalars().all()
-            
-            # Проверяем роли
-            roles_result = await session.execute(select(Role))
-            roles = roles_result.scalars().all()
-            
-            return {
-                "tables": [t[0] for t in tables],
-                "users_count": len(users),
-                "users": [
-                    {
-                        "id": u.id,
-                        "name": f"{u.first_name} {u.last_name}",
-                        "email": u.email,
-                        "password_length": len(u.password) if u.password else 0,
-                        "role_id": u.role_id
-                    } for u in users
-                ],
-                "roles": [{"id": r.id, "name": r.name} for r in roles]
-            }
-        except Exception as e:
-            return {"error": str(e)}
-        
-@app.get("/debug/rooms")
-async def debug_rooms():
-    from app.models import async_session, Room
-    from sqlalchemy import select
-    
-    async with async_session() as session:
-        try:
-            result = await session.execute(select(Room))
-            rooms = result.scalars().all()
-            
-            return {
-                "rooms_count": len(rooms),
-                "rooms": [
-                    {
-                        "id": r.id,
-                        "name": r.name,
-                        "capacity": r.capacity,
-                        "price": r.price,
-                        "amenities": r.amenities
-                    } for r in rooms
-                ]
-            }
-        except Exception as e:
-            return {"error": str(e)}
-
-@app.get("/debug/passwords")
-async def debug_passwords():
-    from app.models import async_session, User
-    from sqlalchemy import select
-    import bcrypt
-    
-    async with async_session() as session:
-        try:
-            result = await session.execute(select(User))
-            users = result.scalars().all()
-            
-            debug_info = []
-            for user in users:
-                # Проверяем текущий пароль
-                password_correct = False
-                password_type = "unknown"
-                
-                if user.password:
-                    # Пробуем проверить как bcrypt хеш
-                    try:
-                        if bcrypt.checkpw(b"password123", user.password.encode('utf-8')):
-                            password_correct = True
-                            password_type = "bcrypt"
-                    except:
-                        pass
-                    
-                    # Пробуем как plain text
-                    if user.password == "password123":
-                        password_correct = True
-                        password_type = "plain"
-                    
-                    # Пробуем как хешированный пароль
-                    if user.password.startswith("$2b$"):
-                        password_type = "bcrypt_hash"
-                
-                debug_info.append({
-                    "id": user.id,
-                    "name": f"{user.first_name} {user.last_name}",
-                    "email": user.email,
-                    "password_exists": bool(user.password),
-                    "password_length": len(user.password) if user.password else 0,
-                    "password_preview": user.password[:20] + "..." if user.password else "none",
-                    "password_type": password_type,
-                    "password_correct_for_'password123'": password_correct
-                })
-            
-            return {
-                "users": debug_info
-            }
-        except Exception as e:
-            return {"error": str(e)}
 
 # Главная страница
 @app.get("/", response_class=HTMLResponse)

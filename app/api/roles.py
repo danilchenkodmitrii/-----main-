@@ -1,8 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from ..models import Role
-from ..models import async_session
+from app.models import Role, async_session
 
 roles_router = APIRouter()
 

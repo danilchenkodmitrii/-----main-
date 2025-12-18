@@ -7,20 +7,7 @@ class AuthModule {
   }
 
   async initializeUsers() {
-    try {
-      const response = await fetch(`${API_BASE}/`);
-      if (response.ok) {
-        this.users = await response.json();
-      }
-    } catch (error) {
-      console.error('Error loading users:', error);
-      // Запасные данные для демонстрации
-      this.users = [
-        { id: "user_1", name: "Алексей Иванов", email: "alex@company.com", role: "admin" },
-        { id: "user_2", name: "Мария Петрова", email: "maria@company.com", role: "user" },
-        { id: "user_3", name: "Иван Сидоров", email: "ivan@company.com", role: "user" }
-      ];
-    }
+    this.users = [];
   }
 
   getCurrentUser() {

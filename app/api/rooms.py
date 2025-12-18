@@ -3,9 +3,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import traceback
 
-from app.models import get_db, Room  # Убедитесь, что Room импортирован
+from app.models import get_db, Room
 from app.services.room_service import RoomService
-from app.schemes.room_schema import RoomCreateSchema  # Убедитесь, что схема импортирована
+from app.schemes.room_schema import RoomCreateSchema
 from app.exceptions.room_exceptions import RoomNotFound, InvalidRoomData
 
 rooms_router = APIRouter()
@@ -34,7 +34,7 @@ async def get_room(room_id: str, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
 
 @rooms_router.post("/")
-async def create_room(data: dict, db: AsyncSession = Depends(get_db)):  # Добавьте Depends(db)
+async def create_room(data: dict, db: AsyncSession = Depends(get_db)):
     try:
         print(f"🏗️ Создание комнаты: {data}")
         
@@ -54,7 +54,7 @@ async def create_room(data: dict, db: AsyncSession = Depends(get_db)):  # Доб
             float(data.get("price", 0))
         )
         
-        print(f"✅ Комната создана: {room.name}")
+        print(f"✅ Комната создана: {room.name} (цена: {room.price} руб/час)")
         return room.to_dict()
         
     except InvalidRoomData as e:

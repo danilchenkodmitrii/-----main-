@@ -10,8 +10,7 @@ from sqlalchemy import pool
 from alembic import context
 
 # ВАЖНО: импортируйте Base из ваших моделей
-from app.models.models import Base  # ← путь к вашим моделям!
-
+from app.models.base import Base
 # this is the Alembic Config object
 config = context.config
 

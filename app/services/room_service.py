@@ -28,8 +28,9 @@ class RoomService:
         return room
     
     @staticmethod
-    async def create_room(session: AsyncSession, name: str, capacity: int, amenities: str = "", price: float = 0):
-        print(f"🏗️ Создание комнаты: {name}, вместимость: {capacity}")
+    async def create_room(session: AsyncSession, name: str, capacity: int, 
+                        amenities: str = "", price: float = 0):
+        print(f"🏗️ Создание комнаты: {name}, вместимость: {capacity}, цена: {price}")
     
         if not name:
             raise InvalidRoomData("Room name is required")
@@ -37,20 +38,23 @@ class RoomService:
         if capacity <= 0:
             raise InvalidRoomData("Room capacity must be positive")
     
+        if price < 0:
+            raise InvalidRoomData("Room price cannot be negative")
+    
         import uuid
         new_room = Room(
             id=f"room_{uuid.uuid4().hex[:8]}",
             name=name,
             capacity=capacity,
             amenities=amenities,
-            price=price
+            price=price  # ⭐⭐⭐ ДОБАВЛЯЕМ ЦЕНУ ⭐⭐⭐
         )
     
         session.add(new_room)
         await session.commit()
         await session.refresh(new_room)
     
-        print(f"✅ Комната создана: {new_room.name}")
+        print(f"✅ Комната создана: {new_room.name} за {new_room.price} руб/час")
         return new_room
     
     @staticmethod

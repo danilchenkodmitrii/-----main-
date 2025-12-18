@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import select, func
-from ..models import User, Room, Booking, Role, async_session
+from app.models import User, Room, Booking, Role, async_session
 
 admin_router = APIRouter()
 
