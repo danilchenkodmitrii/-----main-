@@ -85,10 +85,24 @@ startPolling() {
     this.pollingInterval = setInterval(async () => {
         if (this.currentUser) {
             console.log('🔄 Автообновление данных...');
+            
+            // Обновляем комнаты
             await this.loadRooms();
             
+            // Обновляем бронирования на сегодня
+            const today = new Date().toISOString().split('T')[0];
+            await this.refreshBookingsForDate(today);
+            
+            // Обновляем dashboard если он активен
             if (document.getElementById('dashboard')?.classList.contains('active')) {
-                await this.updateDashboard();
+                this.renderRoomsGrid();
+            }
+            
+            // Обновляем админку/менеджер панель если активна
+            if (document.getElementById('admin')?.classList.contains('active')) {
+                if (this.isAdminOrManager()) {
+                    await this.loadAllBookings();
+                }
             }
         }
     }, 30000); // 30 секунд
@@ -98,10 +112,15 @@ generateTimeSlots() {
     const slots = [];
     
     // Создаем слоты с 9:00 до 18:00 с шагом 30 минут
-    for (let hour = 9; hour <= 18; hour++) {
+    for (let hour = 9; hour <= 17; hour++) {
         for (let minute of ['00', '30']) {
-            // Пропускаем 18:30 так как рабочий день до 18:00
-            if (hour === 18 && minute === '30') continue;
+            // Для 17:30 тоже создаем слот
+            if (hour === 17 && minute === '30') {
+                const time = `17:30`;
+                const display = `17:30`;
+                slots.push({ time, display });
+                continue;
+            }
             
             const time = `${hour.toString().padStart(2, '0')}:${minute}`;
             const display = `${hour}:${minute}`;
@@ -109,7 +128,11 @@ generateTimeSlots() {
         }
     }
     
+    // Добавляем 18:00 как время окончания (не начала)
+    slots.push({ time: "18:00", display: "18:00 (только окончание)" });
+    
     console.log(`✅ Сгенерировано ${slots.length} временных слотов`);
+    console.log('📋 Слоты:', slots.map(s => s.time).join(', '));
     return slots;
 }
 async loginUser(email, password) {
@@ -957,17 +980,33 @@ async loginUser(email, password) {
             this.showNotification('Пользователь не найден в списке', 'error');
         }
     }
-    updateDashboard() {
+    async updateDashboard() {
         console.log("📊 Обновление dashboard...");
         
-        // Устанавливаем сегодняшнюю дату в фильтр по умолчанию
+        // Устанавливаем сегодняшнюю дату
         const today = new Date().toISOString().split('T')[0];
         const dateInput = document.getElementById('filterDate');
         if (dateInput && !dateInput.value) {
             dateInput.value = today;
         }
         
-        // Показываем все комнаты
+        // ЗАГРУЖАЕМ АКТУАЛЬНЫЕ БРОНИРОВАНИЯ для сегодня
+        try {
+            console.log("📅 Загрузка бронирований на сегодня для dashboard...");
+            const response = await fetch(`/api/bookings/?booking_date=${today}`);
+            if (response.ok) {
+                this.bookings = await response.json();
+                console.log(`✅ Загружено ${this.bookings.length} бронирований на сегодня`);
+            } else {
+                console.error('❌ Ошибка загрузки бронирований для dashboard');
+                this.bookings = [];
+            }
+        } catch (error) {
+            console.error('❌ Ошибка сети при загрузке бронирований:', error);
+            this.bookings = [];
+        }
+        
+        // Теперь рендерим комнаты с актуальными данными
         this.renderRoomsGrid();
     }
     
@@ -977,42 +1016,44 @@ async loginUser(email, password) {
             console.error('❌ Элемент roomsGrid не найден');
             return;
         }
-    
-        console.log(`🏢 Отрисовка ${this.rooms.length} комнат`);
+        
+        console.log(`🏢 Отрисовка ${this.rooms.length} комнат с ${this.bookings?.length || 0} бронированиями`);
         container.innerHTML = '';
         
         if (this.rooms.length === 0) {
             container.innerHTML = '<p class="text-muted">Комнаты не найдены</p>';
             return;
         }
-    
+        
         const today = new Date().toISOString().split('T')[0];
-        const bookings = this.bookings || [];
+        const now = new Date();
+        const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
         
         this.rooms.forEach(room => {
-            // Получаем бронирования для этой комнаты на сегодня
-            const roomBookings = bookings.filter(b => 
+            // Фильтруем бронирования для этой комнаты на сегодня
+            const roomBookings = this.bookings?.filter(b => 
                 b && b.roomId === room.id && b.date === today
-            );
-    
-            // Определяем статус комнаты
-            const now = new Date();
-            const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+            ) || [];
             
-            let isBusy = false;
-            roomBookings.forEach(booking => {
+            // Проверяем, занята ли комната СЕЙЧАС
+            let isBusyNow = false;
+            for (const booking of roomBookings) {
                 if (currentTime >= booking.startTime && currentTime < booking.endTime) {
-                    isBusy = true;
+                    isBusyNow = true;
+                    break;
                 }
-            });
-    
+            }
+            
+            const bookingsCount = roomBookings.length;
+            const isFreeAllDay = bookingsCount === 0;
+            
             const roomElement = document.createElement('div');
             roomElement.className = 'room-card';
             roomElement.innerHTML = `
                 <div class="room-header">
                     <h3 class="room-name">${room.name}</h3>
-                    <span class="room-status ${isBusy ? 'status-busy' : 'status-free'}">
-                        ${isBusy ? 'Занята' : 'Свободна'}
+                    <span class="room-status ${isBusyNow ? 'status-busy' : 'status-free'}">
+                        ${isBusyNow ? 'Сейчас занята' : 'Свободна сейчас'}
                     </span>
                 </div>
                 
@@ -1027,25 +1068,49 @@ async loginUser(email, password) {
                     </div>
                     <div class="detail-item">
                         <img src="/icons/calendar.png" alt="Бронирования" class="detail-icon">
-                        <span>${roomBookings.length} бронирований</span>
+                        <span>${bookingsCount} бронирований</span>
                     </div>
                 </div>
                 
-                ${room.amenities ? `<p class="room-amenities"><small>${room.amenities}</small></p>` : ''}
+                ${room.amenities ? `
+                    <div class="room-amenities">
+                        <p><small>🛠️ ${room.amenities}</small></p>
+                    </div>
+                ` : ''}
                 
-                <div class="time-slots">
-                    <strong style="display: block; margin-bottom: 0.5rem;">Слоты сегодня:</strong>
-                    ${this.renderTimeSlots(roomBookings)}
+                <div class="time-slots-container">
+                    <strong style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">
+                        Расписание на сегодня:
+                    </strong>
+                    ${isFreeAllDay ? 
+                        '<div class="slots-grid"><span class="slot available">Свободно весь день</span></div>' : 
+                        this.renderTimeSlots(roomBookings)}
                 </div>
                 
-                <button class="btn btn-primary" onclick="window.app.bookRoom('${room.id}')" 
-                        style="width: 100%; margin-top: 1rem;">
-                    Забронировать
-                </button>
+                <div class="room-card-footer">
+                    <button class="btn btn-primary book-room-btn" onclick="window.app.bookRoom('${room.id}')">
+                        Забронировать комнату
+                    </button>
+                </div>
             `;
-    
+            
             container.appendChild(roomElement);
         });
+    }
+    async refreshBookingsForDate(date) {
+        try {
+            console.log(`🔄 Обновление бронирований на дату: ${date}`);
+            const response = await fetch(`/api/bookings/?booking_date=${date}`);
+            if (response.ok) {
+                const newBookings = await response.json();
+                this.bookings = newBookings;
+                console.log(`✅ Обновлено ${newBookings.length} бронирований`);
+                return newBookings;
+            }
+        } catch (error) {
+            console.error('❌ Ошибка обновления бронирований:', error);
+        }
+        return [];
     }
     
     updateBookingForm() {
@@ -2227,24 +2292,30 @@ bindEvents() {
             this.switchView('auth');
             return;
         }
-    
+        
         const roomId = document.getElementById('roomSelect').value;
         const date = document.getElementById('bookingDate').value;
         const startTime = document.getElementById('startTime').value;
         const endTime = document.getElementById('endTime').value;
         const title = document.getElementById('meetingTitle').value;
         const participants = document.getElementById('participants').value;
-    
+        
         if (!roomId || !date || !startTime || !endTime || !title) {
             this.showNotification('Заполните все обязательные поля', 'error');
             return;
         }
-    
+        
         if (startTime >= endTime) {
             this.showNotification('Время окончания должно быть позже времени начала', 'error');
             return;
         }
-    
+        
+        // Проверяем, что не пытаемся забронировать после 18:00
+        if (endTime > '18:00' || (endTime === '18:00' && startTime >= '18:00')) {
+            this.showNotification('Бронирование возможно только до 18:00', 'error');
+            return;
+        }
+        
         try {
             const response = await fetch('/api/bookings/', {
                 method: 'POST',
@@ -2261,18 +2332,23 @@ bindEvents() {
                     participants: participants ? participants.split(',').map(p => p.trim()) : []
                 })
             });
-    
+            
             if (response.ok) {
                 const booking = await response.json();
                 const roomName = this.rooms.find(r => r.id === roomId)?.name || 'Переговорная';
                 this.showNotification(`"${roomName}" успешно забронирована на ${date} с ${startTime} до ${endTime}`, 'success');
-    
+                
                 // Очищаем форму
                 document.getElementById('meetingTitle').value = '';
                 document.getElementById('participants').value = '';
                 
-                // Переключаемся на расписание
+                // ОБНОВЛЯЕМ ДАННЫЕ БРОНИРОВАНИЙ!
+                await this.refreshBookingsForDate(date);
+                
+                // Переключаемся на расписание и обновляем его
                 this.switchView('dashboard');
+                await this.updateDashboard();
+                
             } else {
                 const error = await response.json();
                 this.showNotification(error.detail || 'Ошибка бронирования', 'error');
@@ -2281,7 +2357,7 @@ bindEvents() {
             console.error('❌ Ошибка сети при бронировании:', error);
             this.showNotification('Ошибка сети', 'error');
         }
-    }   
+    }  
     async updateTimeSlots() {
         const roomId = document.getElementById('roomSelect')?.value;
         const date = document.getElementById('bookingDate')?.value;
@@ -2398,39 +2474,66 @@ bindEvents() {
     getNextTimeSlot(time) {
         const minutes = this.timeToMinutes(time);
         const nextMinutes = minutes + 30;
+        
+        // Если следующее время больше или равно 18:00, возвращаем 18:00
+        if (nextMinutes >= 1080) { // 18:00 = 1080 минут
+            return '18:00';
+        }
+        
         return this.minutesToTime(nextMinutes);
     }
 
     renderTimeSlots(bookings) {
         if (!bookings || bookings.length === 0) {
-            return '<span class="slot available">Свободно весь день</span>';
+            return `
+                <div class="slots-grid">
+                    <span class="slot available">Свободно весь день</span>
+                </div>
+            `;
         }
         
-        // Сортируем бронирования по времени
+        // Сортируем бронирования
         const sortedBookings = [...bookings].sort((a, b) => 
             a.startTime.localeCompare(b.startTime)
         );
         
-        // Генерируем временные слоты с 9:00 до 18:00
-        const timeSlots = [];
-        for (let hour = 9; hour <= 18; hour++) {
-            for (let minute of ['00', '30']) {
-                const time = `${hour.toString().padStart(2, '0')}:${minute}`;
-                const display = `${hour}:${minute}`;
-                
-                // Проверяем, занят ли этот слот
-                const isBooked = sortedBookings.some(booking => 
-                    time >= booking.startTime && time < booking.endTime
-                );
-                
-                const slotClass = isBooked ? 'slot booked' : 'slot available';
-                const slotText = isBooked ? 'Занято' : display;
-                
-                timeSlots.push(`<span class="${slotClass}">${slotText}</span>`);
+        // Создаем сет занятых слотов
+        const bookedSlots = new Set();
+        sortedBookings.forEach(booking => {
+            const startMinutes = this.timeToMinutes(booking.startTime);
+            const endMinutes = this.timeToMinutes(booking.endTime);
+            
+            // Добавляем все 30-минутные слоты между start и end
+            for (let time = startMinutes; time < endMinutes; time += 30) {
+                const slotTime = this.minutesToTime(time);
+                bookedSlots.add(slotTime);
             }
+        });
+        
+        // Генерируем сетку слотов
+        const allSlots = this.generateTimeSlots();
+        const displaySlots = allSlots.filter(slot => slot.time !== '18:00');
+        
+        // Разбиваем на строки по 4 слота
+        const rows = [];
+        for (let i = 0; i < displaySlots.length; i += 4) {
+            const rowSlots = displaySlots.slice(i, i + 4);
+            const rowHtml = rowSlots.map(slot => {
+                const isBooked = bookedSlots.has(slot.time);
+                const slotClass = isBooked ? 'slot booked' : 'slot available';
+                const slotText = isBooked ? 'Занято' : slot.display.replace(':00', '').replace(':30', ':30');
+                
+                return `<span class="${slotClass}" title="${slot.time}">${slotText}</span>`;
+            }).join('');
+            
+            rows.push(`<div class="slots-row">${rowHtml}</div>`);
         }
         
-        return timeSlots.join('');
+        return `
+            <div class="slots-grid">
+                ${rows.join('')}
+            </div>
+        `;
     }
 
     getRoleLabel(role) {
